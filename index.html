@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Conteo CKLASS — Módulo Cíclicos</title>
+  <meta name="theme-color" content="#111827" />
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon-192.png" sizes="192x192">
+  <link rel="apple-touch-icon" href="./icons/icon-512.png">
+  <style>
+    :root {
+      --bg:#0f172a; --card:#111827; --text:#e5e7eb; --muted:#9ca3af; --brand:#ef4444; --ok:#16a34a; --warn:#f59e0b;
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji"; background:var(--bg); color:var(--text); }
+    header { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:linear-gradient(180deg,#111827,#0f172a); position:sticky; top:0; z-index:10; border-bottom:1px solid #1f2937; }
+    header h1 { margin:0; font-size:18px; letter-spacing:.5px; }
+    header .badge { font-size:12px; padding:4px 8px; border-radius:999px; background:#1f2937; color:#fff; }
+    main { display:grid; grid-template-columns: 340px 1fr; gap:14px; padding:14px; }
+    .card { background:var(--card); border:1px solid #1f2937; border-radius:16px; padding:14px; }
+    .card h2 { margin:.2rem 0 0.8rem; font-size:16px; color:#fff; }
+    .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    input, select, button, textarea {
+      background:#0b1220; color:#e5e7eb; border:1px solid #253045; border-radius:10px; padding:10px 12px; font-size:14px;
+    }
+    button { cursor:pointer; }
+    button.primary { background:var(--brand); border-color:#7f1d1d; }
+    button.ghost { background:#0b1220; }
+    button.ok { background:var(--ok); border-color:#064e3b; }
+    button.warn { background:var(--warn); border-color:#78350f; color:#111827; }
+    .muted { color:var(--muted); font-size:12px; }
+    .kpis { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:8px; }
+    .kpi { background:#0b1220; border:1px solid #253045; border-radius:14px; padding:10px; }
+    .kpi .v { font-weight:700; font-size:18px; }
+    .grid { display:grid; gap:8px; }
+    .grid.cols-2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .grid.cols-3 { grid-template-columns: repeat(3, minmax(0,1fr)); }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th, td { padding:8px 10px; border-bottom:1px solid #1f2937; text-align:left; }
+    th { position:sticky; top:0; background:#0b1220; z-index:1; }
+    .status-pill { font-size:11px; padding:4px 8px; border-radius:999px; display:inline-flex; gap:6px; align-items:center; }
+    .pill-ok { background:rgba(34,197,94,.15); color:#86efac; }
+    .pill-warn { background:rgba(245,158,11,.15); color:#fcd34d; }
+    .pill-bad { background:rgba(239,68,68,.15); color:#fca5a5; }
+    .tabbar { display:flex; gap:8px; margin:8px 0 0; }
+    .tabbar button { border-radius:999px; padding:6px 10px; font-size:12px; }
+    .tabbar button.active { background:#e5e7eb; color:#111827; }
+    .print-actions { display:flex; gap:8px; flex-wrap:wrap; }
+    .video { border-radius:12px; overflow:hidden; border:1px solid #253045; }
+    .hidden { display:none !important; }
+    /* Print styles */
+    @media print {
+      header, #loginView, #leftCol, #tabs, #scanControls, #actionsBar { display:none !important; }
+      body { background:#fff; color:#000; }
+      .card { border:0; padding:0; }
+      #printArea { display:block !important; }
+      table th { background:#f3f4f6; }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="row">
+    <h1>Conteo CKLASS — Módulo Cíclicos</h1>
+    <span class="badge" id="catalogVersion">Catálogo: (sin cargar)</span>
+  </div>
+  <div id="userInfo" class="row muted"></div>
+</header>
+
+<!-- LOGIN VIEW -->
+<section id="loginView" class="card" style="max-width:520px; margin:24px auto;">
+  <h2>Acceso</h2>
+  <p class="muted">Escribe tu correo y contraseña. Roles: invitado, supervisor o administrador.</p>
+  <div class="grid cols-2">
+    <input id="email" placeholder="email@empresa.com" />
+    <input id="password" type="password" placeholder="contraseña" />
+  </div>
+  <div class="row" style="margin-top:8px;">
+    <button id="btnLogin" class="primary">Entrar</button>
+    <button id="btnLogout" class="ghost">Salir</button>
+    <button id="btnCreateDemo" class="warn" title="Crea un usuario de prueba local (sin base de datos)">Usuario demo</button>
+  </div>
+  <p class="muted">Si ves error de permisos, solicita a un administrador agregar tu cuenta y asignar rol.</p>
+</section>
+
+<main id="appView" class="hidden">
+  <section id="leftCol" class="card">
+    <h2>Sesión de Conteo</h2>
+    <div class="grid">
+      <div class="grid cols-2">
+        <select id="folioPrefix">
+          <option value="C">C — Calzado</option>
+          <option value="R">R — Ropa</option>
+          <option value="S">S — Sport</option>
+          <option value="G">G — General</option>
+        </select>
+        <input id="almacen" placeholder="Almacén (ej. CALZADO)" />
+      </div>
+      <div class="grid cols-2">
+        <input id="sucursal" placeholder="Sucursal (ej. Center)" />
+        <input id="folioInput" placeholder="Folio" title="Comparte este folio para trabajar en equipo" />
+      </div>
+      <div class="row">
+        <button id="btnNuevoFolio" class="primary">Nuevo folio</button>
+        <button id="btnUnirseFolio" class="ghost">Unirse</button>
+      </div>
+      <div class="kpis">
+        <div class="kpi"><div class="muted">Escaneados</div><div id="kpiEsc" class="v">0</div></div>
+        <div class="kpi"><div class="muted">Faltantes</div><div id="kpiFal" class="v">0</div></div>
+        <div class="kpi"><div class="muted">Sobrantes</div><div id="kpiSob" class="v">0</div></div>
+      </div>
+    </div>
+
+    <h2>Escáner</h2>
+    <div id="scanControls" class="grid">
+      <div class="row">
+        <button id="btnCam" class="ghost">Activar cámara</button>
+        <button id="btnStopCam" class="ghost">Detener</button>
+      </div>
+      <video id="video" class="video" width="300" height="220" muted playsinline></video>
+      <input id="manualCode" placeholder="Código de barras manual" />
+      <div class="grid cols-2">
+        <input id="talla" placeholder="Talla (opcional)" />
+        <input id="coment" placeholder="Comentario (opcional)" />
+      </div>
+      <button id="btnRegistrar" class="ok">Registrar</button>
+      <span class="muted">Usa la cámara o captura el código manual.</span>
+    </div>
+  </section>
+
+  <section class="grid">
+    <section class="card">
+      <div id="actionsBar" class="row" style="justify-content:space-between; align-items:center;">
+        <h2>Conciliación</h2>
+        <div class="tabbar" id="tabs">
+          <button data-tab="todos" class="active">Todos</button>
+          <button data-tab="faltantes">Faltantes</button>
+          <button data-tab="sobrantes">Sobrantes</button>
+          <button data-tab="compensados">Compensados</button>
+        </div>
+        <div class="print-actions">
+          <button id="btnPrintAll" class="ghost">Imprimir: Todo</button>
+          <button id="btnPrintFal" class="ghost">Imprimir: Faltantes</button>
+          <button id="btnPrintSob" class="ghost">Imprimir: Sobrantes</button>
+          <button id="btnPrintCom" class="ghost">Imprimir: Compensados</button>
+        </div>
+      </div>
+      <div style="overflow:auto; max-height:52vh;">
+        <table id="tbl">
+          <thead>
+            <tr>
+              <th>Modelo</th><th>Color</th><th>Talla</th><th>Código</th>
+              <th>Teórico</th><th>Físico</th><th>Diferencia</th><th>Estatus</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Historial de Escaneos</h2>
+      <div style="overflow:auto; max-height:32vh;">
+        <table id="tblHist">
+          <thead>
+            <tr><th>Fecha</th><th>Código</th><th>Modelo</th><th>Color</th><th>Talla</th><th>Usuario</th></tr>
+          </thead>
+          <tbody id="tbodyHist"></tbody>
+        </table>
+      </div>
+    </section>
+  </section>
+</main>
+
+<!-- Área de impresión -->
+<section id="printArea" class="hidden">
+  <div>
+    <h2 style="margin:0 0 8px 0;">Reporte de Conciliación — <span id="printTipo">Todos</span></h2>
+    <div style="display:flex; gap:16px; font-size:13px; margin-bottom:8px;">
+      <div><b>Folio:</b> <span id="pFolio"></span></div>
+      <div><b>Almacén:</b> <span id="pAlm"></span></div>
+      <div><b>Sucursal:</b> <span id="pSuc"></span></div>
+      <div><b>Fecha:</b> <span id="pFecha"></span></div>
+      <div><b>Catálogo:</b> <span id="pCat"></span></div>
+    </div>
+    <table id="tblPrint">
+      <thead>
+        <tr>
+          <th>Modelo</th><th>Color</th><th>Talla</th><th>Código</th>
+          <th>Teórico</th><th>Físico</th><th>Diferencia</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyPrint"></tbody>
+    </table>
+    <div style="margin-top:12px; font-size:12px;">Generado por Conteo CKLASS — Módulo Cíclicos</div>
+  </div>
+</section>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+  // ⚙️ CONFIGURA TU PROYECTO FIREBASE AQUÍ
+  const firebaseConfig = {
+    apiKey: "TU_API_KEY",
+    authDomain: "TU_AUTH_DOMAIN",
+    projectId: "TU_PROJECT_ID",
+    storageBucket: "TU_BUCKET",
+    messagingSenderId: "TU_SENDER_ID",
+    appId: "TU_APP_ID"
+  };
+</script>
+<script>
+  window.__APP_SETTINGS__ = {
+    GITHUB_PAGES_BASE: "/", // Si publicas en GitHub Pages como usuario/repositorio, usa "/<repo>/"
+    CATALOG_VERSION: "24/08/2025", // etiqueta visible
+  };
+</script>
+<script src="./app.js"></script>
+</body>
+</html>

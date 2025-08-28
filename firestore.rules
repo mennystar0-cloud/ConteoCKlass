@@ -1,0 +1,28 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function hasRole(r) { return request.auth.token.role == r; }
+    function isMember(doc) { return request.auth != null && (request.auth.uid in doc.members); }
+
+    // Catálogo (solo lectura para usuarios autenticados)
+    match /catalog/{code} {
+      allow read: if request.auth != null;
+      allow write: if hasRole('admin');
+    }
+
+    // Folios
+    match /folios/{folio} {
+      allow read: if isMember(resource.data) || hasRole('admin') || hasRole('supervisor');
+      allow create: if request.auth != null;
+      allow update, delete: if hasRole('admin') || (isMember(resource.data) && request.resource.data == resource.data);
+      
+      // Scans como subcolección
+      match /scans/{scanId} {
+        allow read: if isMember(get(/databases/$(database)/documents/folios/$(folio)).data) || hasRole('admin') || hasRole('supervisor');
+        allow create: if isMember(get(/databases/$(database)/documents/folios/$(folio)).data) || hasRole('admin') || hasRole('supervisor');
+        allow update, delete: if hasRole('admin');
+      }
+    }
+  }
+}
